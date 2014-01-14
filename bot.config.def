@@ -1,0 +1,10 @@
+# jabber server
+server  irc.example.net
+port    6667
+
+# nick and password
+nick        EVILBOT
+password    12345
+
+# channel
+channel     #gehheim
