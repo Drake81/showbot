@@ -15,6 +15,9 @@ use File::Basename;
 use AnyEvent;
 use AnyEvent::IRC::Client;
 
+use LWP::Simple;
+use JSON;
+
 # make a new config config object
 my $currentpath = dirname(__FILE__);
 my $cfg         = new Config::Simple("$currentpath/bot.config");
@@ -33,10 +36,31 @@ my $port =  $cfg->param('port');
 my $mynick =  $cfg->param('nick');
 my $joinchan =  $cfg->param('channel');
 
-print $joinchan;
-
 # Log config
 Log::Log4perl->init("$currentpath/logging.config");
+
+# LoadPads
+sub getPads {
+
+  my ($search) = @_;
+  my @results;
+
+  # make a JSON parser object
+  my $json = JSON->new->allow_nonref;
+
+  # get JSON via LWP and decode it to hash
+  INFO("Get Pads from api.shownot.es");
+  my $rawdata = get( "http://api.shownot.es/getList" );
+  my $pads    = $json->decode($rawdata);
+
+  foreach my $pad (@$pads) {
+    if ( $pad->{'group'} eq 'pod' and $pad->{'docname'} =~ m/^$search.*$/) {
+      push(@results, 'http://pad.shownot.es/doc/'.$pad->{'docname'});
+    }
+  }
+  sort @results;
+}
+
 
 # Event Registrierung
 $con->reg_cb (connect => sub {
@@ -75,12 +99,34 @@ $con->reg_cb( publicmsg => sub {
   my ($irc, $channel, $msg) = @_;
   my $comment    = $msg->{params}->[1];
   
+  $msg->{prefix} =~ m/^(.*)!.*$/;
+  my $user = $1;
+  
   if ($comment eq "!parser") {
     $con->send_chan( $channel, PRIVMSG => $channel => "http://tools.shownot.es/parsersuite/" );
   }
+  
   if ($comment eq "!osf") {
     $con->send_chan( $channel, PRIVMSG => $channel => "http://shownotes.github.io/OSF-in-a-Nutshell/OSF-in-a-Nutshell.de.html" );
   }
+  
+  if ($comment =~ m/^!pads (.*)$/ ) {
+    my @results  = getPads($1);
+    $con->send_srv(PRIVMSG => $user, "Results:");
+    
+    my $i = 0;
+    foreach my $link (@results) {
+      $i++;
+      $con->send_srv(PRIVMSG => $user, $link);
+      if ($i == 4){
+        $i = 0;
+        sleep 2;
+      }
+    }
+  }
+  
+
+  #$con->send_chan( $channel, PRIVMSG => ($channel, 'Just a debug message…') );
   #$con->send_chan( $channel, PRIVMSG => ($channel, 'Just a debug message…') );
   #$timer = AnyEvent->timer ( 
   #      after => 1,
@@ -101,4 +147,3 @@ $con->send_srv( JOIN => ("$joinchan") );
 $c->wait;
 
 $con->disconnect;
-
