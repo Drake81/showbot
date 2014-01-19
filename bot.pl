@@ -106,6 +106,14 @@ $con->reg_cb( publicmsg => sub {
     $con->send_chan( $channel, PRIVMSG => $channel => "http://tools.shownot.es/parsersuite/" );
   }
   
+  if ($comment eq "!pad") {
+    $con->send_chan( $channel, PRIVMSG => $channel => "http://pad.shownot.es" );
+  }
+  
+  if ($comment eq "!github") {
+    $con->send_chan( $channel, PRIVMSG => $channel => "https://github.com/shownotes" );
+  }
+
   if ($comment eq "!osf") {
     $con->send_chan( $channel, PRIVMSG => $channel => "http://shownotes.github.io/OSF-in-a-Nutshell/OSF-in-a-Nutshell.de.html" );
   }
